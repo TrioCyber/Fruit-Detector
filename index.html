@@ -179,10 +179,8 @@
             <span id="status-text">กำลังโหลดโมเดล AI...</span>
         </div>
 
-        <!-- ซ่อน Input สำหรับเลือกไฟล์ -->
         <input type="file" id="image-input" accept="image/*" hidden>
 
-        <!-- พื้นที่คลิกเพื่อเลือกไฟล์ หรือลากวาง -->
         <div class="upload-area" id="drop-zone">
             <svg class="upload-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -191,13 +189,11 @@
             <div class="upload-hint">รองรับไฟล์ JPG, PNG, WEBP</div>
         </div>
 
-        <!-- ส่วนแสดงรูปพรีวิว -->
         <div class="preview-wrapper" id="preview-wrapper">
             <img id="image-preview" src="" alt="Preview">
         </div>
         <button type="button" class="btn-change" id="btn-change">เปลี่ยนรูปภาพอื่น</button>
 
-        <!-- ผลลัพธ์การทำนาย -->
         <div id="label-container"></div>
     </div>
 
@@ -215,7 +211,6 @@
         const btnChange = document.getElementById("btn-change");
         const labelContainer = document.getElementById("label-container");
 
-        // โหลดโมเดล Teachable Machine
         async function loadModel() {
             try {
                 const modelURL = URL + "model.json";
@@ -234,7 +229,6 @@
 
         loadModel();
 
-        // เหตุการณ์คลิกเลือกไฟล์
         dropZone.addEventListener("click", () => imageInput.click());
         btnChange.addEventListener("click", () => imageInput.click());
 
@@ -244,7 +238,6 @@
             }
         });
 
-        // รองรับการลากไฟล์มาวาง
         dropZone.addEventListener("dragover", (e) => {
             e.preventDefault();
             dropZone.classList.add("dragover");
@@ -262,13 +255,13 @@
             }
         });
 
-        // จัดการไฟล์รูปที่อัปโหลด
         function handleImageUpload(file) {
             if (!file.type.startsWith("image/")) {
                 alert("กรุณาเลือกไฟล์รูปภาพเท่านั้น!");
                 return;
             }
 
+            constReader = new FileReader();
             const reader = new FileReader();
             reader.onload = function(event) {
                 imagePreview.src = event.target.result;
@@ -276,7 +269,6 @@
                 previewWrapper.style.display = "block";
                 btnChange.style.display = "inline-block";
 
-                // เมื่อรูปโหลดเสร็จ ให้สั่งพยากรณ์ทันที
                 imagePreview.onload = async function() {
                     await predict();
                 };
@@ -284,7 +276,6 @@
             reader.readAsDataURL(file);
         }
 
-        // ฟังก์ชันประมวลผลรูปภาพด้วย AI
         async function predict() {
             if (!model) {
                 alert("กรุณารอสักครู่ โมเดลกำลังโหลด...");
@@ -314,7 +305,6 @@
 
                 labelContainer.appendChild(resultItem);
 
-                // ค่อยๆ วิ่งหลอดเปอร์เซ็นต์
                 setTimeout(() => {
                     resultItem.querySelector(".progress-fill").style.width = `${percentage}%`;
                 }, 50);
