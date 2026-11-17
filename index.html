@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Classifier | Teachable Machine</title>
+    <title>AI Webcam Classifier | Teachable Machine</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
@@ -93,53 +93,45 @@
             box-shadow: 0 0 10px #22c55e;
         }
 
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            padding: 36px 20px;
+        .btn-start {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.02);
+            transition: opacity 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+            margin-bottom: 20px;
         }
 
-        .upload-area:hover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.06);
-        }
+        .btn-start:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-start:active { transform: translateY(0); }
 
-        .upload-icon { width: 48px; height: 48px; margin-bottom: 12px; stroke: #38bdf8; }
-        .upload-text { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
-        .upload-hint { font-size: 0.8rem; color: var(--text-muted); }
-
-        .preview-wrapper {
+        #webcam-container {
             display: none;
-            margin-top: 20px;
+            margin: 0 auto 20px auto;
             border-radius: 16px;
             overflow: hidden;
             border: 1px solid var(--border-color);
+            width: fit-content;
             background: #000;
         }
 
-        #image-preview { width: 100%; max-height: 250px; object-fit: contain; display: block; }
-
-        .btn-change {
-            margin-top: 12px;
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            display: none;
+        #webcam-container canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+            max-height: 280px;
         }
 
         #label-container {
-            margin-top: 28px;
             text-align: left;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
         }
 
         .result-item {
@@ -154,55 +146,40 @@
             border-color: rgba(56, 189, 248, 0.4);
         }
 
-        .result-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; font-weight: 600; }
+        .result-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.95rem; font-weight: 600; }
         .result-percent { color: #38bdf8; }
         .progress-bg { width: 100%; height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; }
-        .progress-fill { height: 100%; width: 0%; background: var(--accent-gradient); transition: width 0.5s ease; }
+        .progress-fill { height: 100%; width: 0%; background: var(--accent-gradient); transition: width 0.2s ease; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <span class="badge">AI Vision System</span>
-        <h1>Image Classifier</h1>
-        <p class="subtitle">อัปโหลดรูปภาพเพื่อให้ AI วิเคราะห์และจำแนกหมวดหมู่</p>
+        <span class="badge">AI Real-time Vision</span>
+        <h1>Webcam Classifier</h1>
+        <p class="subtitle">เปิดกล้องเพื่อAIจำแนกวัตถุแบบเรียลไทม์</p>
 
         <div class="status-bar">
             <div class="status-dot" id="status-dot"></div>
             <span id="status-text">กำลังโหลดโมเดล AI...</span>
         </div>
 
-        <input type="file" id="image-input" accept="image/*" hidden>
+        <button type="button" class="btn-start" id="btn-start" onclick="init()" disabled>เริ่มใช้งานกล้อง</button>
 
-        <div class="upload-area" id="drop-zone">
-            <svg class="upload-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
-            <div class="upload-text">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</div>
-            <div class="upload-hint">รองรับไฟล์ JPG, PNG, WEBP</div>
-        </div>
-
-        <div class="preview-wrapper" id="preview-wrapper">
-            <img id="image-preview" src="" alt="Preview">
-        </div>
-        <button type="button" class="btn-change" id="btn-change">เปลี่ยนรูปภาพอื่น</button>
+        <div id="webcam-container"></div>
 
         <div id="label-container"></div>
     </div>
 
     <script type="text/javascript">
-        // 👉 แทนที่ลิงก์ด้านล่างนี้ด้วยลิงก์ Teachable Machine ของคุณ (ที่ได้จากการกด Upload my model)
-        const URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_URL_HERE/";
+        const URL = "https://teachablemachine.withgoogle.com/models/P_BOr7QqK/";
 
-        let model, maxPredictions;
+        let model, webcam, labelContainer, maxPredictions;
 
         const statusDot = document.getElementById("status-dot");
         const statusText = document.getElementById("status-text");
-        const dropZone = document.getElementById("drop-zone");
-        const imageInput = document.getElementById("image-input");
-        const previewWrapper = document.getElementById("preview-wrapper");
-        const imagePreview = document.getElementById("image-preview");
-        const btnChange = document.getElementById("btn-change");
+        const btnStart = document.getElementById("btn-start");
+        const webcamContainer = document.getElementById("webcam-container");
         const labelContainer = document.getElementById("label-container");
 
         async function loadModel() {
@@ -215,6 +192,23 @@
 
                 statusDot.classList.add("ready");
                 statusText.innerText = "โมเดลพร้อมใช้งานแล้ว";
+                btnStart.removeAttribute("disabled");
+
+                // สร้างช่องแสดงผลเปอร์เซ็นต์รอล่วงหน้า
+                for (let i = 0; i < maxPredictions; i++) {
+                    const resultItem = document.createElement("div");
+                    resultItem.className = "result-item";
+                    resultItem.innerHTML = `
+                        <div class="result-header">
+                            <span class="class-name">Loading...</span>
+                            <span class="result-percent">0.0%</span>
+                        </div>
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    `;
+                    labelContainer.appendChild(resultItem);
+                }
             } catch (error) {
                 console.error(error);
                 statusText.innerText = "โหลดโมเดลไม่สำเร็จ (โปรดตรวจสอบลิงก์ URL)";
@@ -224,63 +218,41 @@
 
         loadModel();
 
-        dropZone.addEventListener("click", () => imageInput.click());
-        btnChange.addEventListener("click", () => imageInput.click());
+        async function init() {
+            btnStart.style.display = "none";
+            webcamContainer.style.display = "block";
 
-        imageInput.addEventListener("change", (e) => {
-            if (e.target.files.length > 0) {
-                handleImageUpload(e.target.files[0]);
-            }
-        });
+            const flip = true; 
+            webcam = new tmImage.Webcam(250, 250, flip); 
+            await webcam.setup(); 
+            await webcam.play();
+            window.requestAnimationFrame(loop);
 
-        function handleImageUpload(file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                imagePreview.src = event.target.result;
-                dropZone.style.display = "none";
-                previewWrapper.style.display = "block";
-                btnChange.style.display = "inline-block";
+            webcamContainer.appendChild(webcam.canvas);
+        }
 
-                imagePreview.onload = async function() {
-                    await predict();
-                };
-            };
-            reader.readAsDataURL(file);
+        async function loop() {
+            webcam.update(); 
+            await predict();
+            window.requestAnimationFrame(loop);
         }
 
         async function predict() {
-            if (!model) {
-                alert("กรุณารอสักครู่ โมเดลกำลังโหลด...");
-                return;
-            }
-
-            const prediction = await model.predict(imagePreview);
+            const prediction = await model.predict(webcam.canvas);
             prediction.sort((a, b) => b.probability - a.probability);
-            labelContainer.innerHTML = "";
 
-            prediction.forEach((item, index) => {
+            for (let i = 0; i < maxPredictions; i++) {
+                const item = prediction[i];
                 const percentage = (item.probability * 100).toFixed(1);
-                const isTopMatch = index === 0 && item.probability > 0.5;
+                const isTopMatch = i === 0 && item.probability > 0.5;
 
-                const resultItem = document.createElement("div");
+                const resultItem = labelContainer.children[i];
                 resultItem.className = `result-item ${isTopMatch ? "top-match" : ""}`;
-
-                resultItem.innerHTML = `
-                    <div class="result-header">
-                        <span>${item.className}</span>
-                        <span class="result-percent">${percentage}%</span>
-                    </div>
-                    <div class="progress-bg">
-                        <div class="progress-fill" style="width: 0%"></div>
-                    </div>
-                `;
-
-                labelContainer.appendChild(resultItem);
-
-                setTimeout(() => {
-                    resultItem.querySelector(".progress-fill").style.width = `${percentage}%`;
-                }, 50);
-            });
+                
+                resultItem.querySelector(".class-name").innerText = item.className;
+                resultItem.querySelector(".result-percent").innerText = `${percentage}%`;
+                resultItem.querySelector(".progress-fill").style.width = `${percentage}%`;
+            }
         }
     </script>
 </body>
