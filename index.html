@@ -18,7 +18,13 @@
             --text-muted: #94a3b8;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', 'Inter', sans-serif; }
+        /* แก้ไขจาก - เป็น * เพื่อให้ CSS Reset ทำงานถูกต้อง */
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Prompt', 'Inter', sans-serif; 
+        }
 
         body {
             background-color: var(--bg-color);
@@ -86,6 +92,7 @@
             border-radius: 50%;
             background-color: #eab308;
             box-shadow: 0 0 8px #eab308;
+            transition: all 0.3s ease;
         }
 
         .status-dot.ready {
@@ -102,9 +109,11 @@
             background: rgba(255, 255, 255, 0.02);
         }
 
-        .upload-area:hover {
+        /* เพิ่มสถานะตอนลากไฟล์มาวาง (dragover) */
+        .upload-area:hover, .upload-area.dragover {
             border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.06);
+            background: rgba(56, 189, 248, 0.08);
+            transform: scale(1.01);
         }
 
         .upload-icon { width: 44px; height: 44px; margin-bottom: 10px; stroke: #38bdf8; }
@@ -179,111 +188,4 @@
 
         <div class="upload-area" id="drop-zone">
             <svg class="upload-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
-            <div class="upload-text">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</div>
-            <div class="upload-hint">รองรับไฟล์ JPG, PNG, WEBP</div>
-        </div>
-
-        <div class="preview-wrapper" id="preview-wrapper">
-            <img id="image-preview" src="" alt="Preview">
-        </div>
-        <button type="button" class="btn-change" id="btn-change">เปลี่ยนรูปภาพอื่น</button>
-
-        <div id="label-container"></div>
-    </div>
-
-    <script type="text/javascript">
-        const URL = "https://teachablemachine.withgoogle.com/models/P_BOr7QqK/";
-
-        let model, maxPredictions;
-
-        const statusDot = document.getElementById("status-dot");
-        const statusText = document.getElementById("status-text");
-        const dropZone = document.getElementById("drop-zone");
-        const imageInput = document.getElementById("image-input");
-        const previewWrapper = document.getElementById("preview-wrapper");
-        const imagePreview = document.getElementById("image-preview");
-        const btnChange = document.getElementById("btn-change");
-        const labelContainer = document.getElementById("label-container");
-
-        async function loadModel() {
-            try {
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
-
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
-
-                statusDot.classList.add("ready");
-                statusText.innerText = "โมเดลพร้อมใช้งานแล้ว";
-            } catch (error) {
-                console.error(error);
-                statusText.innerText = "โหลดโมเดลไม่สำเร็จ (โปรดตรวจสอบลิงก์ URL)";
-                statusDot.style.backgroundColor = "#ef4444";
-            }
-        }
-
-        loadModel();
-
-        dropZone.addEventListener("click", () => imageInput.click());
-        btnChange.addEventListener("click", () => imageInput.click());
-
-        imageInput.addEventListener("change", (e) => {
-            if (e.target.files.length > 0) {
-                handleImageUpload(e.target.files[0]);
-            }
-        });
-
-        function handleImageUpload(file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                imagePreview.src = event.target.result;
-                dropZone.style.display = "none";
-                previewWrapper.style.display = "block";
-                btnChange.style.display = "inline-block";
-
-                imagePreview.onload = async function() {
-                    await predict();
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function predict() {
-            if (!model) {
-                alert("กรุณารอสักครู่ โมเดลกำลังโหลด...");
-                return;
-            }
-
-            const prediction = await model.predict(imagePreview);
-            prediction.sort((a, b) => b.probability - a.probability);
-            labelContainer.innerHTML = "";
-
-            prediction.forEach((item, index) => {
-                const percentage = (item.probability * 100).toFixed(1);
-                const isTopMatch = index === 0 && item.probability > 0.5;
-
-                const resultItem = document.createElement("div");
-                resultItem.className = `result-item ${isTopMatch ? "top-match" : ""}`;
-
-                resultItem.innerHTML = `
-                    <div class="result-header">
-                        <span>${item.className}</span>
-                        <span class="result-percent">${percentage}%</span>
-                    </div>
-                    <div class="progress-bg">
-                        <div class="progress-fill" style="width: 0%"></div>
-                    </div>
-                `;
-
-                labelContainer.appendChild(resultItem);
-
-                setTimeout(() => {
-                    resultItem.querySelector(".progress-fill").style.width = `${percentage}%`;
-                }, 50);
-            });
-        }
-    </script>
-</body>
-</html>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5
