@@ -1,406 +1,68 @@
-นี่คือโค้ดทั้งหมดที่ปรับปรุงให้เรียบร้อยแล้วครับ คุณสามารถคัดลอกโค้ดชุดนี้ไปวางทับในไฟล์ HTML เดิมของคุณได้เลยครับ
+<div>Teachable Machine Image Model</div>
+<button type="button" onclick="init()">Start (Webcam)</button>
+<br><br>
+<!-- เพิ่มส่วนปุ่มอัปโหลดรูปภาพ -->
+<input type="file" id="imageUpload" accept="image/*" onchange="uploadImage(event)">
+<br><br>
 
-```html
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Classifier | Teachable Machine</title>
-    <!-- โหลดฟอนต์สวยๆ จาก Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- โหลด TensorFlow.js และ Teachable Machine -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<div id="webcam-container"></div>
+<div id="image-container"></div>
+<div id="label-container"></div>
 
-    <style>
-        :root {
-            --bg-color: #090d16;
-            --card-bg: rgba(20, 27, 45, 0.75);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #a855f7 100%);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<script type="text/javascript">
+    // 👉 ใช้ลิงก์โมเดลออนไลน์จาก Teachable Machine ของคุณ (วางแทนที่ URL นี้ได้เลย)
+    const URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_URL_HERE/";
+
+    let model, webcam, labelContainer, maxPredictions;
+    let uploadedImageElement = null;
+
+    // Load the image model
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const flip = true; // whether to flip the webcam
+        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append elements to the DOM
+        document.getElementById("webcam-container").innerHTML = "";
+        document.getElementById("webcam-container").appendChild(webcam.canvas);
+        
+        labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+        for (let i = 0; i < maxPredictions; i++) {
+            labelContainer.appendChild(document.createElement("div"));
+        }
+    }
+
+    async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict(webcam.canvas);
+        window.requestAnimationFrame(loop);
+    }
+
+    // ฟังก์ชันสำหรับอัปโหลดรูปภาพมาทายผลแทนกล้อง
+    async function uploadImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // ถ้าเปิดกล้องอยู่ ให้หยุดการทำงานลูปของกล้องชั่วคราว
+        if (webcam) {
+            try { webcam.stop(); } catch(e) {}
+            document.getElementById("webcam-container").innerHTML = "";
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Prompt', 'Inter', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 15% 20%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 32px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            text-align: center;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            background: rgba(79, 172, 254, 0.15);
-            color: #38bdf8;
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            margin-bottom: 12px;
-        }
-
-        h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            background: var(--accent-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        p.subtitle {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 24px;
-        }
-
-        /* สถานะการโหลดโมเดล */
-        .status-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #eab308;
-            box-shadow: 0 0 8px #eab308;
-            transition: all 0.3s ease;
-        }
-
-        .status-dot.ready {
-            background-color: #22c55e;
-            box-shadow: 0 0 10px #22c55e;
-        }
-
-        /* พื้นที่อัปโหลดรูปภาพ */
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            padding: 36px 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.02);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .upload-area:hover, .upload-area.dragover {
-            border-color: #38bdf8;
-            background: rgba(56, 189, 248, 0.06);
-            transform: translateY(-2px);
-        }
-
-        .upload-icon {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 12px;
-            stroke: #38bdf8;
-        }
-
-        .upload-text {
-            font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 4px;
-        }
-
-        .upload-hint {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* ส่วนแสดงภาพตัวอย่าง */
-        .preview-wrapper {
-            display: none;
-            margin-top: 20px;
-            position: relative;
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            background: #000;
-        }
-
-        #image-preview {
-            width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-            display: block;
-        }
-
-        .btn-change {
-            margin-top: 12px;
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: 0.2s;
-            display: none;
-        }
-
-        .btn-change:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        /* ส่วนแสดงผลลัพธ์การทำนาย */
-        #label-container {
-            margin-top: 28px;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        .result-item {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .result-item.top-match {
-            background: rgba(56, 189, 248, 0.1);
-            border-color: rgba(56, 189, 248, 0.4);
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
-        }
-
-        .result-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-
-        .result-percent {
-            color: #38bdf8;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .progress-bg {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: var(--accent-gradient);
-            border-radius: 999px;
-            transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <span class="badge">AI Vision System</span>
-        <h1>Image Classifier</h1>
-        <p class="subtitle">อัปโหลดรูปภาพเพื่อให้ AI วิเคราะห์และจำแนกหมวดหมู่</p>
-
-        <!-- สถานะโมเดล -->
-        <div class="status-bar">
-            <div class="status-dot" id="status-dot"></div>
-            <span id="status-text">กำลังโหลดโมเดล AI...</span>
-        </div>
-
-        <!-- Input รับไฟล์ (ซ่อนไว้) -->
-        <input type="file" id="image-input" accept="image/*" hidden>
-
-        <!-- กล่องอัปโหลดรูปภาพ -->
-        <div class="upload-area" id="drop-zone">
-            <svg class="upload-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
-            <div class="upload-text">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</div>
-            <div class="upload-hint">รองรับไฟล์ JPG, PNG, WEBP</div>
-        </div>
-
-        <!-- กล่องแสดงภาพตัวอย่าง -->
-        <div class="preview-wrapper" id="preview-wrapper">
-            <img id="image-preview" src="" alt="Preview">
-        </div>
-        <button type="button" class="btn-change" id="btn-change">เปลี่ยนรูปภาพอื่น</button>
-
-        <!-- กล่องแสดงผลลัพธ์ -->
-        <div id="label-container"></div>
-    </div>
-
-    <script type="text/javascript">
-        // พาธโฟลเดอร์โมเดลของคุณ
-        const URL = "./my_model/";
-
-        let model, maxPredictions;
-
-        const statusDot = document.getElementById("status-dot");
-        const statusText = document.getElementById("status-text");
-        const dropZone = document.getElementById("drop-zone");
-        const imageInput = document.getElementById("image-input");
-        const previewWrapper = document.getElementById("preview-wrapper");
-        const imagePreview = document.getElementById("image-preview");
-        const btnChange = document.getElementById("btn-change");
-        const labelContainer = document.getElementById("label-container");
-
-        // 1. โหลดโมเดลอัตโนมัติทันทีที่เปิดหน้าเว็บ
-        async function loadModel() {
-            try {
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
-
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
-
-                statusDot.classList.add("ready");
-                statusText.innerText = "โมเดลพร้อมใช้งานแล้ว";
-            } catch (error) {
-                console.error(error);
-                statusText.innerText = "โหลดโมเดลไม่สำเร็จ (ตรวจสอบโฟลเดอร์ my_model)";
-                statusDot.style.backgroundColor = "#ef4444";
-                statusDot.style.boxShadow = "0 0 8px #ef4444";
-            }
-        }
-
-        // เรียกใช้ฟังก์ชันโหลดโมเดล
-        loadModel();
-
-        // 2. จัดการ Event การคลิกและการลากวางไฟล์ (Drag & Drop)
-        dropZone.addEventListener("click", () => imageInput.click());
-        btnChange.addEventListener("click", () => imageInput.click());
-
-        dropZone.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            dropZone.classList.add("dragover");
-        });
-
-        dropZone.addEventListener("dragleave", () => {
-            dropZone.classList.remove("dragover");
-        });
-
-        dropZone.addEventListener("drop", (e) => {
-            e.preventDefault();
-            dropZone.classList.remove("dragover");
-            if (e.dataTransfer.files.length > 0) {
-                handleImageUpload(e.dataTransfer.files[0]);
-            }
-        });
-
-        imageInput.addEventListener("change", (e) => {
-            if (e.target.files.length > 0) {
-                handleImageUpload(e.target.files[0]);
-            }
-        });
-
-        // 3. แสดงภาพตัวอย่างและส่งให้โมเดลประมวลผล
-        function handleImageUpload(file) {
-            if (!file.type.startsWith("image/")) {
-                alert("กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น");
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                imagePreview.src = event.target.result;
-                
-                // สลับการแสดงผลจากกล่องอัปโหลดเป็นรูปภาพตัวอย่าง
-                dropZone.style.display = "none";
-                previewWrapper.style.display = "block";
-                btnChange.style.display = "inline-block";
-
-                // รอให้รูปภาพโหลดลง DOM เสร็จก่อนแล้วค่อยเริ่มทำนายผล
-                imagePreview.onload = async function() {
-                    await predict();
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // 4. ฟังก์ชันวิเคราะห์รูปภาพ
-        async function predict() {
-            if (!model) {
-                alert("กรุณารอสักครู่ โมเดลกำลังโหลด...");
-                return;
-            }
-
-            // ส่ง element <img> เข้าไปให้โมเดลทำนาย
-            const prediction = await model.predict(imagePreview);
-
-            // เรียงลำดับผลลัพธ์จากความมั่นใจมากไปน้อย
-            prediction.sort((a, b) => b.probability - a.probability);
-
-            // ล้างผลลัพธ์เก่า
-            labelContainer.innerHTML = "";
-
-            // สร้าง UI แสดงผลลัพธ์ทีละคลาส
-            prediction.forEach((item, index) => {
-                const percentage = (item.probability * 100).toFixed(1);
-                const isTopMatch = index === 0 && item.probability > 0.5;
-
-                const resultItem = document.createElement("div");
-                resultItem.className = `result-item ${isTopMatch ? "top-match" : ""}`;
-
-                resultItem.innerHTML = `
-                    <div class="result-header">
-                        <span>${item.className}</span>
-                        <span class="result-percent">${percentage}%</span>
-                    </div>
-                    <div class="progress-bg">
-                        <div class="progress-fill" style="width: 0%"></div>
-                    </div>
-                `;
-
-                labelContainer.appendChild(resultItem);
-
-                // หน่วงเวลาเล็กน้อยเพื่อให้แถบ Progress Bar วิ่งแบบสมูท
-                setTimeout(() => {
-                    resultItem.querySelector(".progress-fill").style.width = `${percentage}%`;
-                }, 50);
-            });
-        }
-    </script>
-</body>
-</html>
-
-```
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            if (!uploadedImageElement) {
+                uploadedImageElement = document.createElement("img");
+                uploadedImageElement.width = 2
